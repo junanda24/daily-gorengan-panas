@@ -1,0 +1,1066 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Gorengan Panas!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --page-bg: #171019;
+        --panel: rgba(24, 13, 7, 0.88);
+        --panel-edge: #f2b134;
+        --ink: #ffe9c4;
+        --ink-dim: #d9a860;
+        --accent: #e85d26;
+        --accent-dark: #7a2c10;
+        --gold: #ffd94d;
+        --good: #7bc950;
+        --bad: #ff5a47;
+      }
+      @media (prefers-color-scheme: light) {
+        :root { --page-bg: #2a1a12; }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--ink);
+        font-family: ui-monospace, 'Courier New', monospace;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100dvh;
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .stage {
+        position: relative;
+        width: min(100vw, 55.2632dvh);
+        aspect-ratio: 420 / 760;
+        max-height: 100dvh;
+        box-shadow: 0 0 0 3px #000, 0 18px 60px rgba(0, 0, 0, 0.55);
+        background: #131a2e;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+      }
+      .pxfont { font-family: 'Press Start 2P', ui-monospace, monospace; }
+
+      /* ---------- corner buttons ---------- */
+      .topbtns {
+        position: absolute;
+        top: 8px; left: 8px; right: 8px;
+        display: flex;
+        justify-content: space-between;
+        pointer-events: none;
+        z-index: 5;
+      }
+      .chipbtn {
+        pointer-events: auto;
+        min-width: 44px; min-height: 44px;
+        padding: 6px 8px;
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 8px;
+        line-height: 1.5;
+        color: var(--ink);
+        background: rgba(20, 11, 5, 0.78);
+        border: 2px solid var(--ink-dim);
+        border-radius: 0;
+        cursor: pointer;
+      }
+      .chipbtn:active { transform: translateY(2px); }
+
+      /* ---------- heat controls ---------- */
+      .heatbar {
+        position: absolute;
+        left: 0; right: 0; bottom: 0;
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 5;
+      }
+      .heatlabel {
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 9px;
+        color: var(--gold);
+        margin-right: 2px;
+        text-shadow: 2px 2px 0 #000;
+      }
+      .heatbtn {
+        flex: 1;
+        min-height: 48px;
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 10px;
+        color: var(--ink);
+        background: #3a2415;
+        border: 3px solid #120a05;
+        box-shadow: inset 0 0 0 2px #6b4423, 0 4px 0 #120a05;
+        cursor: pointer;
+        border-radius: 0;
+      }
+      .heatbtn.on {
+        background: var(--accent);
+        color: #fff4d6;
+        box-shadow: inset 0 0 0 2px #ffb37a, 0 4px 0 #120a05;
+      }
+      .heatbtn:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px #6b4423, 0 1px 0 #120a05; }
+      .heatbtn:disabled { opacity: 0.45; cursor: default; }
+
+      /* ---------- shift banner ---------- */
+      .banner {
+        position: absolute;
+        left: 0; right: 0; top: 34%;
+        text-align: center;
+        z-index: 6;
+        pointer-events: none;
+      }
+      .banner .bigt {
+        display: inline-block;
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 26px;
+        color: var(--gold);
+        background: rgba(20, 11, 5, 0.85);
+        border: 3px solid var(--panel-edge);
+        padding: 16px 18px 12px;
+        text-shadow: 3px 3px 0 #7a2c10;
+      }
+      .banner .subt {
+        margin-top: 10px;
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 10px;
+        color: var(--ink);
+        text-shadow: 2px 2px 0 #000;
+      }
+
+      /* ---------- overlays ---------- */
+      .overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 24px 20px;
+        background: var(--panel);
+      }
+      .hidden { display: none !important; }
+      .ovtitle {
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 30px;
+        line-height: 1.35;
+        color: var(--gold);
+        text-shadow: 4px 4px 0 #7a2c10;
+        margin: 0 0 14px;
+      }
+      .ovtitle.red { color: var(--bad); text-shadow: 4px 4px 0 #4d0f08; }
+      .ovsub {
+        font-size: 15px;
+        color: var(--ink);
+        margin: 0 0 22px;
+      }
+      .howto {
+        font-size: 13.5px;
+        line-height: 1.75;
+        color: var(--ink);
+        background: rgba(0, 0, 0, 0.35);
+        border: 2px solid #6b4423;
+        padding: 12px 14px;
+        margin: 0 0 22px;
+        max-width: 330px;
+        text-align: left;
+      }
+      .howto b { color: var(--gold); font-weight: 700; }
+      .record {
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 11px;
+        color: var(--ink-dim);
+        margin: 0 0 24px;
+        line-height: 1.8;
+      }
+      .record .new {
+        color: var(--gold);
+        font-size: 14px;
+        animation: blink 0.7s steps(2, start) infinite;
+      }
+      @keyframes blink { to { visibility: hidden; } }
+      @media (prefers-reduced-motion: reduce) {
+        .record .new { animation: none; }
+      }
+      .stats {
+        font-size: 16px;
+        line-height: 2;
+        color: var(--ink);
+        margin: 0 0 24px;
+      }
+      .stats b { color: var(--gold); }
+      .bigbtn {
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 14px;
+        color: #fff4d6;
+        background: var(--accent);
+        border: 3px solid #120a05;
+        box-shadow: inset 0 0 0 2px #ffb37a, 0 6px 0 var(--accent-dark);
+        padding: 16px 22px;
+        min-height: 56px;
+        cursor: pointer;
+        border-radius: 0;
+      }
+      .bigbtn:active { transform: translateY(4px); box-shadow: inset 0 0 0 2px #ffb37a, 0 2px 0 var(--accent-dark); }
+      .keys {
+        margin-top: 22px;
+        font-size: 12px;
+        color: var(--ink-dim);
+        line-height: 1.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage" id="stage">
+      <canvas id="game" width="420" height="760"></canvas>
+
+      <div class="topbtns">
+        <button class="chipbtn" id="muteBtn" type="button">SUARA NYALA</button>
+        <button class="chipbtn" id="pauseBtn" type="button">JEDA</button>
+      </div>
+
+      <div class="heatbar" id="heatbar">
+        <span class="heatlabel">API</span>
+        <button class="heatbtn" type="button" data-heat="kecil">KECIL</button>
+        <button class="heatbtn on" type="button" data-heat="sedang">SEDANG</button>
+        <button class="heatbtn" type="button" data-heat="besar">BESAR</button>
+      </div>
+
+      <div class="banner hidden" id="banner">
+        <span class="bigt" id="bannerTitle">SHIFT 1</span>
+        <div class="subt" id="bannerSub"></div>
+      </div>
+
+      <div class="overlay" id="menuOv">
+        <h1 class="ovtitle">GORENGAN<br />PANAS!</h1>
+        <p class="ovsub">Jangan sampai gosong.</p>
+        <div class="howto">
+          1. Ketuk wajan kosong untuk menaruh gorengan.<br />
+          2. Ketuk lagi saat meter masuk <b>ZONA EMAS</b> untuk menyajikan dan dapat koin.<br />
+          3. Terlambat sedikit saja jadi <b>GOSONG</b> — bintangmu berkurang satu.
+        </div>
+        <p class="record" id="menuRecord">REKOR: -</p>
+        <button class="bigbtn" id="startBtn" type="button">MULAI JUALAN</button>
+        <p class="keys">Tombol 1-4: pilih slot &nbsp;·&nbsp; K: putar api<br />Spasi: mulai &nbsp;·&nbsp; P: jeda</p>
+      </div>
+
+      <div class="overlay hidden" id="pauseOv">
+        <h1 class="ovtitle">ISTIRAHAT</h1>
+        <p class="ovsub">Kompor aman, gorengan menunggu.</p>
+        <button class="bigbtn" id="resumeBtn" type="button">LANJUTKAN</button>
+      </div>
+
+      <div class="overlay hidden" id="overOv">
+        <h1 class="ovtitle red">WARUNG<br />TUTUP</h1>
+        <p class="stats" id="overStats"></p>
+        <p class="record" id="overRecord"></p>
+        <button class="bigbtn" id="againBtn" type="button">JUALAN LAGI</button>
+      </div>
+    </div>
+
+    <script>
+      'use strict';
+
+      /* ================= DATA ================= */
+      const W = 420;
+      const H = 760;
+      const TYPES = {
+        tahu:   { name: 'Tahu',   price: 2000, raw: [245, 230, 184], gold: [242, 177, 52] },
+        tempe:  { name: 'Tempe',  price: 2000, raw: [200, 155, 106], gold: [165, 103, 42] },
+        bakwan: { name: 'Bakwan', price: 2500, raw: [232, 163, 79],  gold: [217, 124, 30] },
+        pisang: { name: 'Pisang', price: 3000, raw: [247, 226, 107], gold: [245, 185, 33] },
+        cireng: { name: 'Cireng', price: 1500, raw: [243, 237, 226], gold: [232, 217, 174] }
+      };
+      const UNLOCKS = [
+        ['tahu', 'tempe'],
+        ['tahu', 'tempe', 'bakwan'],
+        ['tahu', 'tempe', 'bakwan', 'pisang'],
+        ['tahu', 'tempe', 'bakwan', 'pisang', 'cireng']
+      ];
+      const UNLOCK_MSG = { 2: 'MENU BARU: BAKWAN!', 3: 'MENU BARU: PISANG!', 4: 'MENU BARU: CIRENG!' };
+      const HEATS = {
+        kecil:  { dur: 16,  zone: [55, 90] },
+        sedang: { dur: 10,  zone: [60, 88] },
+        besar:  { dur: 6.5, zone: [66, 88] }
+      };
+      const HEAT_ORDER = ['kecil', 'sedang', 'besar'];
+      const SLOT_POS = [
+        { x: 136, y: 424 }, { x: 284, y: 424 },
+        { x: 136, y: 506 }, { x: 284, y: 506 }
+      ];
+      const QUEUE_X = [58, 152, 246, 340];
+      const GROUND_Y = 316;
+      const BURNT = [26, 18, 16];
+      const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const P_COUNT = REDUCED ? 0.4 : 1;
+
+      function unlockedTypes() { return UNLOCKS[Math.min(S.shift, 4) - 1]; }
+      function fmtRp(n) { return 'Rp ' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+      function rand(a, b) { return a + Math.random() * (b - a); }
+      function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+      function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function mixc(c1, c2, t) {
+        return [Math.round(lerp(c1[0], c2[0], t)), Math.round(lerp(c1[1], c2[1], t)), Math.round(lerp(c1[2], c2[2], t))];
+      }
+      function css(c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
+      function shade(c, f) { return [Math.round(c[0] * f), Math.round(c[1] * f), Math.round(c[2] * f)]; }
+      function storeGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+      function storeSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* abaikan */ } }
+
+      /* ================= STATE ================= */
+      const S = {
+        mode: 'MENU',           // MENU | PLAYING | PAUSED | GAME_OVER
+        coins: 0,
+        stars: 3,
+        combo: 0,
+        shift: 1,
+        shiftT: 45,
+        heat: 'sedang',
+        slots: [null, null, null, null],   // {type, prog}
+        customers: [],                     // {type, pat, patMax, x, shirt, skin, hair, hairC}
+        spawnT: 1,
+        bannerT: 0,
+        shake: 0,
+        time: 0,
+        high: parseInt(storeGet('gorenganPanas.high.v1') || '0', 10) || 0,
+        newRecord: false,
+        bubbleT: 0
+      };
+
+      /* ================= AUDIO ================= */
+      const AU = {
+        ctx: null, master: null, sizzleGain: null,
+        muted: storeGet('gorenganPanas.mute.v1') === '1',
+        init: function () {
+          if (this.ctx) { return; }
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) { return; }
+          this.ctx = new AC();
+          this.master = this.ctx.createGain();
+          this.master.gain.value = this.muted ? 0 : 0.9;
+          this.master.connect(this.ctx.destination);
+          const len = 2 * this.ctx.sampleRate;
+          const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) { d[i] = Math.random() * 2 - 1; }
+          const src = this.ctx.createBufferSource();
+          src.buffer = buf; src.loop = true;
+          const bp = this.ctx.createBiquadFilter();
+          bp.type = 'bandpass'; bp.frequency.value = 5400; bp.Q.value = 0.5;
+          this.sizzleGain = this.ctx.createGain();
+          this.sizzleGain.gain.value = 0;
+          src.connect(bp); bp.connect(this.sizzleGain); this.sizzleGain.connect(this.master);
+          src.start();
+        },
+        resume: function () {
+          this.init();
+          if (this.ctx && this.ctx.state === 'suspended') { this.ctx.resume(); }
+        },
+        setSizzle: function (n) {
+          if (!this.ctx) { return; }
+          const active = S.mode === 'PLAYING' && S.bannerT <= 0;
+          const v = active ? Math.min(0.15, n * 0.042) : 0;
+          this.sizzleGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.12);
+        },
+        tone: function (freq, dur, type, vol, delay, slideTo) {
+          if (!this.ctx || this.muted) { return; }
+          const t0 = this.ctx.currentTime + (delay || 0);
+          const o = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          o.type = type; o.frequency.setValueAtTime(freq, t0);
+          if (slideTo) { o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur); }
+          g.gain.setValueAtTime(vol, t0);
+          g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+          o.connect(g); g.connect(this.master);
+          o.start(t0); o.stop(t0 + dur + 0.02);
+        },
+        pop: function () { this.tone(420, 0.09, 'square', 0.12, 0, 180); },
+        ding: function () { this.tone(1046, 0.16, 'sine', 0.2, 0); this.tone(1568, 0.22, 'sine', 0.16, 0.07); },
+        coin: function () { this.tone(1568, 0.07, 'square', 0.1, 0); this.tone(2093, 0.14, 'square', 0.1, 0.06); },
+        perfect: function () {
+          const notes = [784, 988, 1175, 1568];
+          for (let i = 0; i < notes.length; i++) { this.tone(notes[i], 0.16, 'triangle', 0.2, i * 0.07); }
+        },
+        buzz: function () { this.tone(140, 0.38, 'sawtooth', 0.22, 0, 82); this.tone(96, 0.38, 'square', 0.12, 0, 60); },
+        thud: function () { this.tone(220, 0.12, 'sine', 0.16, 0, 90); },
+        toggleMute: function () {
+          this.muted = !this.muted;
+          storeSet('gorenganPanas.mute.v1', this.muted ? '1' : '0');
+          if (this.master) { this.master.gain.value = this.muted ? 0 : 0.9; }
+          return this.muted;
+        }
+      };
+
+      /* ================= PARTICLES & FLOATERS (pool) ================= */
+      const PPOOL = [];
+      for (let i = 0; i < 260; i++) {
+        PPOOL.push({ alive: false, kind: '', x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 1, size: 2, col: '#fff' });
+      }
+      function spawnP(kind, x, y, vx, vy, life, size, col) {
+        for (let i = 0; i < PPOOL.length; i++) {
+          const p = PPOOL[i];
+          if (!p.alive) {
+            p.alive = true; p.kind = kind; p.x = x; p.y = y; p.vx = vx; p.vy = vy;
+            p.life = life; p.maxLife = life; p.size = size; p.col = col;
+            return;
+          }
+        }
+      }
+      function burstSparks(x, y) {
+        const n = Math.round(12 * P_COUNT);
+        for (let i = 0; i < n; i++) {
+          const a = rand(0, Math.PI * 2), sp = rand(30, 130);
+          spawnP('spark', x, y, Math.cos(a) * sp, Math.sin(a) * sp - 40, rand(0.3, 0.65), rand(2, 4), pick(['#ffd94d', '#ffb37a', '#fff3b0']));
+        }
+      }
+      function burstSmoke(x, y) {
+        const n = Math.round(11 * P_COUNT);
+        for (let i = 0; i < n; i++) {
+          spawnP('smoke', x + rand(-16, 16), y + rand(-6, 6), rand(-12, 12), rand(-46, -22), rand(0.7, 1.3), rand(5, 10), pick(['#4a423c', '#5d534b', '#38312c']));
+        }
+      }
+      function updateParticles(dt) {
+        for (let i = 0; i < PPOOL.length; i++) {
+          const p = PPOOL[i];
+          if (!p.alive) { continue; }
+          p.life -= dt;
+          if (p.life <= 0) { p.alive = false; continue; }
+          if (p.kind === 'spark') { p.vy += 260 * dt; }
+          if (p.kind === 'smoke') { p.size += 9 * dt; p.vx *= (1 - 0.6 * dt); }
+          if (p.kind === 'bubble') { p.y -= 14 * dt; p.x += Math.sin((p.maxLife - p.life) * 14 + p.size * 7) * 6 * dt; }
+          p.x += p.vx * dt; p.y += p.vy * dt;
+        }
+      }
+
+      const FLOATERS = [];
+      function addFloater(x, y, text, col, big) {
+        FLOATERS.push({ x: x, y: y, text: text, col: col, life: 1.15, big: !!big });
+        if (FLOATERS.length > 10) { FLOATERS.shift(); }
+      }
+      function updateFloaters(dt) {
+        for (let i = FLOATERS.length - 1; i >= 0; i--) {
+          FLOATERS[i].life -= dt;
+          FLOATERS[i].y -= 34 * dt;
+          if (FLOATERS[i].life <= 0) { FLOATERS.splice(i, 1); }
+        }
+      }
+
+      /* ================= GAME LOGIC ================= */
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const menuOv = document.getElementById('menuOv');
+      const pauseOv = document.getElementById('pauseOv');
+      const overOv = document.getElementById('overOv');
+      const bannerEl = document.getElementById('banner');
+      const bannerTitle = document.getElementById('bannerTitle');
+      const bannerSub = document.getElementById('bannerSub');
+      const muteBtn = document.getElementById('muteBtn');
+      const pauseBtn = document.getElementById('pauseBtn');
+
+      function showBanner(title, sub, dur) {
+        bannerTitle.textContent = title;
+        bannerSub.textContent = sub || '';
+        bannerEl.classList.remove('hidden');
+        S.bannerT = dur;
+      }
+      function hideBanner() { bannerEl.classList.add('hidden'); }
+
+      function resetGame() {
+        S.coins = 0; S.stars = 3; S.combo = 0; S.shift = 1; S.shiftT = 45;
+        S.heat = 'sedang';
+        S.slots = [null, null, null, null];
+        S.customers = [];
+        S.spawnT = 0.9;
+        S.newRecord = false;
+        S.shake = 0;
+        FLOATERS.length = 0;
+        for (let i = 0; i < PPOOL.length; i++) { PPOOL[i].alive = false; }
+        syncHeatButtons();
+      }
+
+      function startGame() {
+        AU.resume();
+        resetGame();
+        S.mode = 'PLAYING';
+        menuOv.classList.add('hidden');
+        overOv.classList.add('hidden');
+        pauseOv.classList.add('hidden');
+        showBanner('SHIFT 1', 'TAHU + TEMPE SIAP DIGORENG', 2);
+      }
+
+      function gameOver() {
+        S.mode = 'GAME_OVER';
+        S.newRecord = S.coins > S.high;
+        if (S.newRecord) {
+          S.high = S.coins;
+          storeSet('gorenganPanas.high.v1', String(S.high));
+        }
+        document.getElementById('overStats').innerHTML =
+          'Koin terkumpul: <b>' + fmtRp(S.coins) + '</b><br />Bertahan sampai: <b>Shift ' + S.shift + '</b>';
+        document.getElementById('overRecord').innerHTML =
+          (S.newRecord ? '<span class="new">REKOR BARU!</span><br />' : '') + 'REKOR: ' + fmtRp(S.high);
+        document.getElementById('menuRecord').textContent = 'REKOR: ' + fmtRp(S.high);
+        hideBanner();
+        overOv.classList.remove('hidden');
+      }
+
+      function pauseGame() {
+        if (S.mode !== 'PLAYING') { return; }
+        S.mode = 'PAUSED';
+        pauseOv.classList.remove('hidden');
+      }
+      function resumeGame() {
+        if (S.mode !== 'PAUSED') { return; }
+        S.mode = 'PLAYING';
+        pauseOv.classList.add('hidden');
+        AU.resume();
+      }
+
+      function nextShift() {
+        S.shift += 1;
+        S.shiftT = 45;
+        const msg = UNLOCK_MSG[S.shift] || 'PELANGGAN MAKIN RAMAI!';
+        showBanner('SHIFT ' + S.shift, msg, 4);
+      }
+
+      function patienceForShift() { return Math.max(12, 22 - 1.5 * (S.shift - 1)); }
+      function spawnInterval() {
+        const f = Math.max(0.5, 1 - 0.07 * (S.shift - 1));
+        return rand(4, 7) * f;
+      }
+      const SHIRTS = ['#e2543e', '#3e7cb1', '#7bc950', '#e8a33d', '#9b59b6', '#2aa198', '#d65076'];
+      const SKINS = ['#f2c894', '#d9a05f', '#a96f35', '#8a5527'];
+      const HAIRC = ['#1c1410', '#3a2415', '#5d3a1a', '#888888'];
+      function spawnCustomer() {
+        const types = unlockedTypes();
+        const c = {
+          type: pick(types),
+          pat: patienceForShift(),
+          patMax: patienceForShift(),
+          x: W + 50,
+          shirt: pick(SHIRTS), skin: pick(SKINS),
+          hair: Math.floor(rand(0, 4)), hairC: pick(HAIRC)
+        };
+        S.customers.push(c);
+      }
+
+      function chooseTypeForSlot() {
+        const inWok = {};
+        for (let i = 0; i < 4; i++) { if (S.slots[i]) { inWok[S.slots[i].type] = true; } }
+        for (let i = 0; i < S.customers.length; i++) {
+          if (!inWok[S.customers[i].type]) { return S.customers[i].type; }
+        }
+        return pick(unlockedTypes());
+      }
+
+      function loseStar() {
+        S.stars -= 1;
+        if (S.stars <= 0) { S.stars = 0; gameOver(); }
+      }
+
+      function burnSlot(i, silent) {
+        const pos = SLOT_POS[i];
+        S.slots[i] = null;
+        S.combo = 0;
+        if (!silent) {
+          addFloater(pos.x, pos.y - 52, 'GOSONG!', '#ff5a47', true);
+          burstSmoke(pos.x, pos.y - 10);
+          if (!REDUCED) { S.shake = 0.38; }
+          AU.buzz();
+          loseStar();
+        }
+      }
+
+      function tapSlot(i) {
+        if (S.mode !== 'PLAYING' || S.bannerT > 0) { return; }
+        const heat = HEATS[S.heat];
+        const z0 = heat.zone[0], z1 = heat.zone[1];
+        const pos = SLOT_POS[i];
+        const slot = S.slots[i];
+        if (!slot) {
+          S.slots[i] = { type: chooseTypeForSlot(), prog: 0 };
+          AU.pop();
+          return;
+        }
+        const p = slot.prog;
+        if (p < z0) {
+          S.slots[i] = null;
+          S.combo = 0;
+          addFloater(pos.x, pos.y - 52, 'MENTAH!', '#ffe9c4', false);
+          AU.thud();
+          return;
+        }
+        if (p > z1) { burnSlot(i, false); return; }
+        /* sajikan */
+        const type = slot.type;
+        S.slots[i] = null;
+        const center = (z0 + z1) / 2;
+        const perfect = Math.abs(p - center) <= 4;
+        let pay = TYPES[type].price;
+        let servedIdx = -1;
+        for (let k = 0; k < S.customers.length; k++) {
+          if (S.customers[k].type === type) { servedIdx = k; break; }
+        }
+        if (servedIdx >= 0) { pay *= 1.5; S.customers.splice(servedIdx, 1); }
+        if (perfect) { pay *= 1.5; }
+        const mult = 1 + Math.min(S.combo, 10) * 0.1;
+        pay = Math.round(pay * mult / 50) * 50;
+        S.coins += pay;
+        S.combo += 1;
+        burstSparks(pos.x, pos.y - 14);
+        if (perfect) {
+          addFloater(pos.x, pos.y - 56, 'SEMPURNA! +' + fmtRp(pay), '#ffd94d', true);
+          AU.perfect(); AU.coin();
+        } else {
+          addFloater(pos.x, pos.y - 56, 'MANTAP! +' + fmtRp(pay), '#ffd94d', false);
+          AU.ding(); AU.coin();
+        }
+      }
+
+      function updateGame(dt) {
+        const heat = HEATS[S.heat];
+        const rate = 100 / heat.dur;
+        for (let i = 0; i < 4; i++) {
+          const slot = S.slots[i];
+          if (!slot) { continue; }
+          slot.prog += rate * dt;
+          if (slot.prog >= 100) { burnSlot(i, false); if (S.mode !== 'PLAYING') { return; } }
+        }
+        /* minyak bergelembung */
+        S.bubbleT -= dt;
+        if (S.bubbleT <= 0) {
+          S.bubbleT = 0.07;
+          const occupied = [];
+          for (let i = 0; i < 4; i++) { if (S.slots[i]) { occupied.push(i); } }
+          if (occupied.length > 0) {
+            const n = Math.max(1, Math.round(occupied.length * P_COUNT));
+            for (let k = 0; k < n; k++) {
+              const pos = SLOT_POS[pick(occupied)];
+              spawnP('bubble', pos.x + rand(-30, 30), pos.y + rand(-14, 16), 0, 0, rand(0.4, 0.9), rand(1.5, 3.5), '#ffcf7a');
+            }
+          }
+        }
+        /* pelanggan */
+        S.spawnT -= dt;
+        if (S.spawnT <= 0) {
+          if (S.customers.length < 4) { spawnCustomer(); }
+          S.spawnT = spawnInterval();
+        }
+        for (let i = S.customers.length - 1; i >= 0; i--) {
+          const c = S.customers[i];
+          c.pat -= dt;
+          const targetX = QUEUE_X[i];
+          c.x += (targetX - c.x) * Math.min(1, dt * 5);
+          if (c.pat <= 0) {
+            addFloater(clamp(c.x, 40, W - 40), 150, 'PERGI!', '#ff5a47', false);
+            S.customers.splice(i, 1);
+            S.combo = 0;
+          }
+        }
+        /* shift */
+        S.shiftT -= dt;
+        if (S.shiftT <= 0) { nextShift(); }
+      }
+
+      /* ================= RENDER ================= */
+      function rect(x, y, w, h, col) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+
+      function foodColor(type, prog) {
+        const t = TYPES[type];
+        if (prog < 68) { return mixc(t.raw, t.gold, prog / 68); }
+        if (prog < 88) { return t.gold; }
+        return mixc(t.gold, BURNT, clamp((prog - 88) / 12, 0, 1));
+      }
+
+      function drawFood(type, cx, cy, s, prog) {
+        const main = foodColor(type, prog);
+        const dark = shade(main, 0.72);
+        const light = mixc(main, [255, 255, 255], 0.35);
+        const u = 3 * s;
+        function R(gx, gy, gw, gh, c) { ctx.fillStyle = css(c); ctx.fillRect(cx + gx * u, cy + gy * u, gw * u, gh * u); }
+        if (type === 'tahu') {
+          R(-4, -3, 8, 6, main); R(-4, -3, 8, 1, light); R(-4, 2, 8, 1, dark);
+          R(-2, -1, 1, 1, dark); R(2, 0, 1, 1, dark); R(0, 1, 1, 1, dark);
+        } else if (type === 'tempe') {
+          R(-5, -2, 10, 4, main); R(-5, -2, 10, 1, light); R(-5, 1, 10, 1, dark);
+          R(-4, 0, 2, 1, dark); R(-1, -1, 2, 1, dark); R(2, 0, 2, 1, dark);
+        } else if (type === 'bakwan') {
+          R(-3, -3, 6, 1, main); R(-5, -2, 9, 1, main); R(-5, -1, 10, 2, main);
+          R(-4, 1, 9, 1, main); R(-3, 2, 6, 1, dark);
+          R(-2, -1, 1, 1, [90, 140, 50]); R(2, 0, 1, 1, [230, 110, 40]); R(0, 1, 1, 1, [90, 140, 50]);
+        } else if (type === 'pisang') {
+          R(-5, 1, 2, 2, main); R(-4, -1, 2, 2, main); R(-2, -2, 2, 2, main);
+          R(0, -3, 2, 2, main); R(2, -2, 2, 2, main); R(4, -1, 2, 2, main); R(5, 1, 1, 2, dark);
+          R(-2, -2, 4, 1, light);
+        } else if (type === 'cireng') {
+          R(-2, -3, 4, 1, main); R(-4, -2, 7, 1, main); R(-4, -1, 8, 2, main);
+          R(-3, 1, 7, 1, main); R(-2, 2, 4, 1, dark); R(-2, -2, 2, 1, light);
+        }
+      }
+
+      function drawStar(cx, cy, s, filled) {
+        ctx.fillStyle = filled ? '#ffd94d' : 'rgba(255,233,196,0.25)';
+        const pts = [[0, -1], [0.25, -0.35], [1, -0.3], [0.4, 0.15], [0.6, 0.85], [0, 0.45], [-0.6, 0.85], [-0.4, 0.15], [-1, -0.3], [-0.25, -0.35]];
+        ctx.beginPath();
+        for (let i = 0; i < pts.length; i++) {
+          const px = cx + pts[i][0] * s, py = cy + pts[i][1] * s;
+          if (i === 0) { ctx.moveTo(px, py); } else { ctx.lineTo(px, py); }
+        }
+        ctx.closePath(); ctx.fill();
+      }
+
+      function drawCustomer(c, idx) {
+        const x = c.x, gy = GROUND_Y;
+        const bob = (S.mode === 'PLAYING' && S.bannerT <= 0) ? Math.sin(S.time * 3 + idx * 1.7) * 1.5 : 0;
+        const y = gy + bob;
+        /* kaki + badan */
+        rect(x - 11, y - 14, 9, 14, '#2c2c38'); rect(x + 3, y - 14, 9, 14, '#2c2c38');
+        rect(x - 14, y - 42, 28, 29, c.shirt);
+        rect(x - 14, y - 42, 28, 5, css(shade(hexToRgb(c.shirt), 0.75)));
+        rect(x - 18, y - 40, 4, 20, c.skin); rect(x + 14, y - 40, 4, 20, c.skin);
+        /* kepala */
+        rect(x - 10, y - 64, 20, 22, c.skin);
+        if (c.hair === 0) { rect(x - 10, y - 64, 20, 6, c.hairC); }
+        else if (c.hair === 1) { rect(x - 11, y - 66, 22, 7, c.shirt); rect(x - 13, y - 60, 26, 3, c.shirt); }
+        else if (c.hair === 2) { rect(x - 10, y - 64, 20, 6, c.hairC); rect(x - 3, y - 71, 7, 7, c.hairC); }
+        else { rect(x - 12, y - 64, 4, 26, c.hairC); rect(x + 8, y - 64, 4, 26, c.hairC); rect(x - 12, y - 64, 24, 6, c.hairC); }
+        rect(x - 6, y - 53, 3, 3, '#1c1410'); rect(x + 3, y - 53, 3, 3, '#1c1410');
+        if (c.pat / c.patMax < 0.3) { rect(x - 1, y - 47, 4, 2, '#7a2c10'); }
+        /* gelembung pesanan */
+        const bx = clamp(x - 26, 4, W - 56), by = 158 + bob;
+        rect(bx - 2, by - 2, 56, 46, '#120a05');
+        rect(bx, by, 52, 42, '#fff6e3');
+        rect(bx + 20, by + 42, 10, 7, '#fff6e3');
+        drawFood(c.type, bx + 26, by + 17, 0.62, 74);
+        const pr = clamp(c.pat / c.patMax, 0, 1);
+        rect(bx + 4, by + 33, 44, 5, '#3a2415');
+        rect(bx + 4, by + 33, 44 * pr, 5, pr > 0.5 ? '#7bc950' : (pr > 0.25 ? '#ffd94d' : '#ff5a47'));
+      }
+      function hexToRgb(h) {
+        return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+      }
+
+      function drawScene() {
+        /* langit malam */
+        rect(0, 0, W, H, '#131a2e');
+        ctx.fillStyle = '#e8ecff';
+        const stars = [[30, 30], [90, 16], [150, 40], [330, 22], [386, 44], [268, 12], [52, 70], [404, 84], [200, 20], [120, 84]];
+        for (let i = 0; i < stars.length; i++) {
+          ctx.globalAlpha = 0.35 + 0.3 * Math.sin(S.time * 1.4 + i * 2.1);
+          ctx.fillRect(stars[i][0], stars[i][1], 2, 2);
+        }
+        ctx.globalAlpha = 1;
+        rect(368, 18, 22, 22, '#f5efce'); rect(374, 14, 14, 6, '#f5efce'); rect(362, 24, 6, 10, '#f5efce');
+        rect(374, 22, 4, 4, '#ddd39f');
+        /* papan nama */
+        rect(96, 26, 228, 44, '#120a05');
+        rect(99, 29, 222, 38, '#5d3a1a');
+        rect(99, 29, 222, 4, '#7a4d22');
+        ctx.fillStyle = '#ffd94d';
+        ctx.font = '13px "Press Start 2P", monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('WARUNG GORENGAN', 210, 49);
+        /* lampu gantung */
+        const lampX = [46, 374];
+        for (let i = 0; i < lampX.length; i++) {
+          const lx = lampX[i];
+          rect(lx - 1, 0, 2, 26, '#0a0a12');
+          const flick = 0.85 + 0.15 * Math.sin(S.time * 7 + i * 3);
+          const g = ctx.createRadialGradient(lx, 38, 2, lx, 38, 52);
+          g.addColorStop(0, 'rgba(255,196,84,' + (0.5 * flick) + ')');
+          g.addColorStop(1, 'rgba(255,196,84,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.arc(lx, 38, 52, 0, Math.PI * 2); ctx.fill();
+          rect(lx - 7, 26, 14, 5, '#2c2c38');
+          rect(lx - 4, 31, 8, 8, '#ffcf5e');
+        }
+        /* lampu tali */
+        for (let i = 0; i < 9; i++) {
+          const lx = 116 + i * 24, ly = 78 + Math.sin(i * 0.9) * 3;
+          ctx.fillStyle = ['#ff5a47', '#ffd94d', '#7bc950', '#5eb2ff'][i % 4];
+          ctx.fillRect(lx, ly, 4, 5);
+        }
+      }
+
+      function drawHUD() {
+        ctx.textBaseline = 'middle';
+        ctx.font = '11px "Press Start 2P", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#ffd94d';
+        ctx.fillText(fmtRp(S.coins), 12, 108);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffe9c4';
+        ctx.fillText('SHIFT ' + S.shift, 210, 100);
+        rect(160, 114, 100, 6, 'rgba(0,0,0,0.5)');
+        rect(160, 114, 100 * clamp(S.shiftT / 45, 0, 1), 6, '#e85d26');
+        for (let i = 0; i < 3; i++) { drawStar(368 + i * 20, 106, 9, i < S.stars); }
+      }
+
+      function drawWok() {
+        /* meja kayu */
+        rect(0, GROUND_Y, W, 26, '#4a2c14');
+        rect(0, GROUND_Y, W, 4, '#6b4423');
+        rect(0, GROUND_Y + 26, W, 52, '#241207');
+        /* kompor + api */
+        rect(120, 592, 180, 16, '#2c2c38');
+        rect(120, 592, 180, 4, '#45455a');
+        const heatLvl = S.heat === 'kecil' ? 0.55 : (S.heat === 'sedang' ? 0.85 : 1.3);
+        for (let fx = 132; fx < 288; fx += 8) {
+          const fh = (10 + 8 * Math.abs(Math.sin(S.time * 11 + fx * 1.7))) * heatLvl;
+          rect(fx, 592 - fh * 0.55, 6, fh * 0.55, '#3155c9');
+          rect(fx + 1, 592 - fh * 0.34, 4, fh * 0.34, '#e85d26');
+          rect(fx + 2, 592 - fh * 0.16, 2, fh * 0.16, '#ffd94d');
+        }
+        /* wajan */
+        ctx.fillStyle = '#0d0b09';
+        ctx.beginPath(); ctx.ellipse(210, 474, 196, 108, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#241d17';
+        ctx.beginPath(); ctx.ellipse(210, 466, 190, 102, 0, 0, Math.PI * 2); ctx.fill();
+        /* minyak */
+        ctx.fillStyle = '#c05e14';
+        ctx.beginPath(); ctx.ellipse(210, 468, 176, 92, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#e07b24';
+        ctx.beginPath(); ctx.ellipse(210, 464, 168, 86, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(245,155,60,0.55)';
+        ctx.beginPath(); ctx.ellipse(196, 452, 110, 52, 0, 0, Math.PI * 2); ctx.fill();
+        /* gagang */
+        rect(2, 448, 26, 12, '#0d0b09'); rect(392, 448, 26, 12, '#0d0b09');
+      }
+
+      function drawSlot(i) {
+        const pos = SLOT_POS[i];
+        const slot = S.slots[i];
+        const heat = HEATS[S.heat];
+        const z0 = heat.zone[0], z1 = heat.zone[1];
+        if (!slot) {
+          ctx.strokeStyle = 'rgba(255,233,196,0.35)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath(); ctx.arc(pos.x, pos.y - 6, 30, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = 'rgba(255,233,196,0.5)';
+          ctx.font = '16px "Press Start 2P", monospace';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('+', pos.x, pos.y - 5);
+          return;
+        }
+        const inZone = slot.prog >= z0 && slot.prog <= z1;
+        if (inZone) {
+          const pulse = 3 + Math.sin(S.time * 10) * 1.5;
+          ctx.strokeStyle = '#ffd94d';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(pos.x, pos.y - 6, 34 + pulse, 0, Math.PI * 2); ctx.stroke();
+        }
+        drawFood(slot.type, pos.x, pos.y - 8, 1.25, slot.prog);
+        /* meter */
+        const bw = 84, bx = pos.x - bw / 2, by = pos.y + 26;
+        rect(bx - 2, by - 2, bw + 4, 13, '#120a05');
+        rect(bx, by, bw, 9, '#3a2415');
+        rect(bx + bw * z0 / 100, by, bw * (z1 - z0) / 100, 9, 'rgba(255,217,77,0.45)');
+        const fillC = slot.prog < z0 ? '#e8e0c8' : (inZone ? '#ffd94d' : '#ff7b3c');
+        rect(bx, by, bw * clamp(slot.prog / 100, 0, 1), 9, fillC);
+        const center = (z0 + z1) / 2;
+        rect(bx + bw * center / 100 - 1, by - 3, 2, 15, '#fff6e3');
+      }
+
+      function drawCombo() {
+        if (S.combo <= 0 || S.mode === 'MENU') { return; }
+        const hot = S.combo >= 5;
+        ctx.font = '13px "Press Start 2P", monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const label = 'KOMBO x' + S.combo + '  +' + Math.min(S.combo, 10) * 10 + '%';
+        if (hot) {
+          ctx.fillStyle = 'rgba(232,93,38,' + (0.25 + 0.15 * Math.sin(S.time * 9)) + ')';
+          ctx.fillText(label, 210, 646);
+          ctx.fillStyle = '#ffd94d';
+        } else {
+          ctx.fillStyle = '#ffe9c4';
+        }
+        ctx.fillText(label, 210, 644);
+      }
+
+      function drawParticles() {
+        for (let i = 0; i < PPOOL.length; i++) {
+          const p = PPOOL[i];
+          if (!p.alive) { continue; }
+          const a = clamp(p.life / p.maxLife, 0, 1);
+          if (p.kind === 'bubble') {
+            ctx.globalAlpha = a * 0.9;
+            ctx.strokeStyle = p.col; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.stroke();
+          } else if (p.kind === 'smoke') {
+            ctx.globalAlpha = a * 0.55;
+            rect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size, p.col);
+          } else {
+            ctx.globalAlpha = a;
+            rect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size, p.col);
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawFloaters() {
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (let i = 0; i < FLOATERS.length; i++) {
+          const f = FLOATERS[i];
+          ctx.globalAlpha = clamp(f.life / 0.6, 0, 1);
+          ctx.font = (f.big ? '15px' : '11px') + ' "Press Start 2P", monospace';
+          ctx.fillStyle = '#120a05';
+          ctx.fillText(f.text, f.x + 2, f.y + 2);
+          ctx.fillStyle = f.col;
+          ctx.fillText(f.text, f.x, f.y);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function render() {
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        ctx.clearRect(0, 0, W, H);
+        if (S.shake > 0 && !REDUCED) {
+          const m = 9 * (S.shake / 0.38);
+          ctx.translate(rand(-m, m), rand(-m, m));
+        }
+        drawScene();
+        drawHUD();
+        for (let i = 0; i < S.customers.length; i++) { drawCustomer(S.customers[i], i); }
+        drawWok();
+        for (let i = 0; i < 4; i++) { drawSlot(i); }
+        drawCombo();
+        drawParticles();
+        drawFloaters();
+        /* panel bawah untuk tombol api */
+        rect(0, 690, W, 70, '#241207');
+        rect(0, 690, W, 4, '#6b4423');
+      }
+
+      /* ================= INPUT ================= */
+      function syncHeatButtons() {
+        const btns = document.querySelectorAll('.heatbtn');
+        for (let i = 0; i < btns.length; i++) {
+          btns[i].classList.toggle('on', btns[i].getAttribute('data-heat') === S.heat);
+        }
+      }
+      function setHeat(h) {
+        if (HEATS[h]) { S.heat = h; syncHeatButtons(); }
+      }
+      function cycleHeat() {
+        const idx = HEAT_ORDER.indexOf(S.heat);
+        setHeat(HEAT_ORDER[(idx + 1) % HEAT_ORDER.length]);
+      }
+
+      canvas.addEventListener('pointerdown', function (e) {
+        AU.resume();
+        if (S.mode !== 'PLAYING') { return; }
+        const r = canvas.getBoundingClientRect();
+        const x = (e.clientX - r.left) * W / r.width;
+        const y = (e.clientY - r.top) * H / r.height;
+        let best = -1, bestD = 62;
+        for (let i = 0; i < 4; i++) {
+          const dx = x - SLOT_POS[i].x, dy = y - (SLOT_POS[i].y - 6);
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < bestD) { bestD = d; best = i; }
+        }
+        if (best >= 0) { tapSlot(best); }
+      });
+
+      document.getElementById('heatbar').addEventListener('click', function (e) {
+        const b = e.target.closest('.heatbtn');
+        if (b) { AU.resume(); setHeat(b.getAttribute('data-heat')); }
+      });
+      document.getElementById('startBtn').addEventListener('click', startGame);
+      document.getElementById('againBtn').addEventListener('click', startGame);
+      document.getElementById('resumeBtn').addEventListener('click', resumeGame);
+      pauseBtn.addEventListener('click', function () {
+        AU.resume();
+        if (S.mode === 'PLAYING') { pauseGame(); }
+        else if (S.mode === 'PAUSED') { resumeGame(); }
+      });
+      function refreshMuteLabel() { muteBtn.textContent = AU.muted ? 'SUARA MATI' : 'SUARA NYALA'; }
+      muteBtn.addEventListener('click', function () {
+        AU.resume();
+        AU.toggleMute();
+        refreshMuteLabel();
+      });
+      refreshMuteLabel();
+      if (S.high > 0) { document.getElementById('menuRecord').textContent = 'REKOR: ' + fmtRp(S.high); }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          AU.resume();
+          if (S.mode === 'MENU' || S.mode === 'GAME_OVER') { startGame(); }
+          return;
+        }
+        if (e.key === 'p' || e.key === 'P') {
+          if (S.mode === 'PLAYING') { pauseGame(); }
+          else if (S.mode === 'PAUSED') { resumeGame(); }
+          return;
+        }
+        if (S.mode !== 'PLAYING') { return; }
+        if (e.key >= '1' && e.key <= '4') { tapSlot(parseInt(e.key, 10) - 1); }
+        else if (e.key === 'k' || e.key === 'K') { cycleHeat(); }
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden && S.mode === 'PLAYING') { pauseGame(); }
+      });
+      document.addEventListener('pointerdown', function () { AU.resume(); }, { once: true });
+
+      /* ================= CANVAS SCALING ================= */
+      const DPR = Math.min(2, window.devicePixelRatio || 1);
+      function fitCanvas() {
+        canvas.width = W * DPR;
+        canvas.height = H * DPR;
+      }
+      fitCanvas();
+      window.addEventListener('resize', fitCanvas);
+      if (document.fonts && document.fonts.load) { document.fonts.load('13px "Press Start 2P"'); }
+
+      /* ================= MAIN LOOP ================= */
+      let last = performance.now();
+      function frame(now) {
+        requestAnimationFrame(frame);
+        let dt = (now - last) / 1000;
+        last = now;
+        if (dt > 0.05) { dt = 0.05; }
+        S.time += dt;
+        if (S.shake > 0) { S.shake = Math.max(0, S.shake - dt); }
+        if (S.mode === 'PLAYING') {
+          if (S.bannerT > 0) {
+            S.bannerT -= dt;
+            if (S.bannerT <= 0) { hideBanner(); }
+          } else {
+            updateGame(dt);
+          }
+        }
+        updateParticles(dt);
+        updateFloaters(dt);
+        let frying = 0;
+        for (let i = 0; i < 4; i++) { if (S.slots[i]) { frying++; } }
+        AU.setSizzle(frying);
+        render();
+      }
+      requestAnimationFrame(frame);
+    </script>
+  </body>
+</html>

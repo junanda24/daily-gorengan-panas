@@ -1,5 +1,7 @@
 # Gorengan Panas!
 
+**🎮 Mainkan langsung:** https://daily-gorengan-panas.vercel.app
+
 **Game arcade pixel-art: kamu jadi tukang gorengan kaki lima.** Empat slot di
 wajan, tiap gorengan punya meter kematangan — ketuk tepat saat meter masuk
 **zona emas** untuk menyajikan ke pelanggan. Terlambat sedikit saja =
